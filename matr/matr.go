@@ -87,36 +87,29 @@ func (m *Matr) Handle(task *Task) {
 // Run will execute the requested task function with the provided context and arguments.
 func (m *Matr) Run(ctx context.Context, args ...string) error {
 	argsLen := len(args)
-	if argsLen == 1 {
+	if argsLen == 0 {
 		m.PrintUsage("")
 		return nil
 	}
 
+	var handlerArgs []string
+
 	if argsLen > 1 {
+		handlerArgs = args[1:]
+
 		if args[1] == "-h" {
 			m.PrintUsage(args[0])
 			return nil
 		}
 	}
 
-	var handlerArgs []string
-
-	taskName := "default"
-
-	if argsLen != 0 {
-		taskName = args[0]
-	}
-
-	if argsLen > 1 {
-		handlerArgs = args[1:]
-	}
-
 	ctx = context.WithValue(ctx, ctxArgsKey, handlerArgs)
 
-	task, ok := m.tasks[taskName]
+	task, ok := m.tasks[args[0]]
 	if !ok {
+		fmt.Fprintf(os.Stderr, "ERROR: no handler found for target \""+args[0]+"\"\n")
 		m.PrintUsage("")
-		return fmt.Errorf("no handler found for target \"%s\"", taskName)
+		return nil
 	}
 
 	err := task.Handler(ctx, handlerArgs)

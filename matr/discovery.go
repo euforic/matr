@@ -24,6 +24,7 @@ var (
 	helpFlag     bool
 	versionFlag  bool
 	cleanFlag    bool
+	noCacheFlag  bool
 )
 
 // Run is the primary entrypoint to matrs cli tool.
@@ -36,6 +37,7 @@ func Run() {
 	fs.BoolVar(&cleanFlag, "clean", false, "clean the matr cache")
 	fs.BoolVar(&helpFlag, "h", false, "Display usage info")
 	fs.BoolVar(&versionFlag, "v", false, "Display version")
+	fs.BoolVar(&noCacheFlag, "no-cache", false, "Don't use the matr cache")
 	if err := fs.Parse(os.Args[1:]); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -58,7 +60,7 @@ func Run() {
 		return
 	}
 
-	matrCachePath, err := build(matrFilePath)
+	matrCachePath, err := build(matrFilePath, noCacheFlag)
 	if err != nil {
 		fs.Usage()
 		os.Stderr.WriteString(err.Error() + "\n")
@@ -110,7 +112,7 @@ func run(matrCachePath string, args ...string) error {
 	return c.Run()
 }
 
-func build(matrFilePath string) (string, error) {
+func build(matrFilePath string, noCache bool) (string, error) {
 	// get absolute path to matrfile
 	matrFilePath, err := filepath.Abs(matrFilePath)
 	if err != nil {
@@ -127,7 +129,7 @@ func build(matrFilePath string) (string, error) {
 
 	// read the hash from the matrfileSha256 file
 	oldHash, err := os.ReadFile(filepath.Join(matrCachePath, "matrfile.sha256"))
-	if err == nil {
+	if err == nil && !noCache {
 		// if the hash is the same, we can skip the build
 		if ok := bytes.Equal(oldHash, newHash); ok {
 			return matrCachePath, nil
@@ -141,7 +143,6 @@ func build(matrFilePath string) (string, error) {
 		}
 	}
 
-	fmt.Println("Building matrfile...")
 	// if the file doesn't exist, create it
 	if err := os.WriteFile(filepath.Join(matrCachePath, "matrfile.sha256"), []byte(newHash), 0644); err != nil {
 		return "", err
