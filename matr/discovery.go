@@ -2,6 +2,7 @@ package matr
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"errors"
 	"flag"
 	"fmt"
@@ -97,22 +98,36 @@ func run(matrCachePath string, args ...string) error {
 }
 
 func build(matrFilePath string, cmds []parser.Command) (string, error) {
-	var b bytes.Buffer
-
 	matrPath, matrFile := filepath.Split(matrFilePath)
 	matrCachePath := filepath.Join(matrPath, ".matr")
 
+	// check if the matrfile has changed
+	newHash, err := getSha256(matrFilePath)
+	if err != nil {
+		return "", err
+	}
+
+	// read the hash from the matrfileSha256 file
+	oldHash, err := os.ReadFile(filepath.Join(matrCachePath, "matrfile.sha256"))
+	if err == nil {
+		// if the hash is the same, we can skip the build
+		if ok := bytes.Equal(oldHash, newHash); ok {
+			return matrCachePath, nil
+		}
+	}
+
+	// check if the cache folder exists
 	if dir, err := os.Stat(matrCachePath); err != nil || !dir.IsDir() {
 		if err := os.Mkdir(matrCachePath, 0777); err != nil {
 			return "", err
 		}
 	}
 
-	f, err := os.OpenFile(filepath.Join(matrCachePath, "main.go"), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
-	if err != nil {
+	fmt.Println("Building matrfile...")
+	// if the file doesn't exist, create it
+	if err := os.WriteFile(filepath.Join(matrCachePath, "matrfile.sha256"), []byte(newHash), 0644); err != nil {
 		return "", err
 	}
-	defer f.Close()
 
 	if !symlinkValid(matrCachePath) {
 		os.Remove(filepath.Join(matrCachePath, defaultMatrFile))
@@ -123,11 +138,15 @@ func build(matrFilePath string, cmds []parser.Command) (string, error) {
 		}
 	}
 
-	if err := generate(cmds, &b); err != nil {
+	// create the main.go file in the matr cache folder
+	// for the generated code to write to
+	f, err := os.OpenFile(filepath.Join(matrCachePath, "main.go"), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+	if err != nil {
 		return "", err
 	}
+	defer f.Close()
 
-	if _, err := io.Copy(f, &b); err != nil {
+	if err := generate(cmds, f); err != nil {
 		return "", err
 	}
 
@@ -139,6 +158,20 @@ func build(matrFilePath string, cmds []parser.Command) (string, error) {
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 	return matrCachePath, cmd.Run()
+}
+
+func getSha256(path string) ([]byte, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return nil, err
+	}
+
+	return h.Sum(nil), nil
 }
 
 func getMatrfilePath(matrFilePath string) (string, error) {

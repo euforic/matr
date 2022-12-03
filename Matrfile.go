@@ -19,3 +19,10 @@ func Test(ctx context.Context, args []string) error {
 
 	return nil
 }
+
+func Run(ctx context.Context, args []string) error {
+	fmt.Println("Running matr")
+	fmt.Println(args)
+
+	return nil
+}
