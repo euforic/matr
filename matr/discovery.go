@@ -23,49 +23,62 @@ var (
 	matrFilePath string
 	helpFlag     bool
 	versionFlag  bool
+	cleanFlag    bool
 )
 
 // Run is the primary entrypoint to matrs cli tool.
 // This is where the matrfile path is resolved, compiled and executed
 func Run() {
 	// TODO: clean up this shit show
-	flag.StringVar(&matrFilePath, "matrfile", "./", "path to Matrfile")
-	flag.BoolVar(&helpFlag, "h", false, "Display usage info")
-	flag.BoolVar(&versionFlag, "v", false, "Display version")
-	flag.Parse()
-	if versionFlag {
-		fmt.Println(Version)
-		return
+	// create a new flagset
+	fs := flag.NewFlagSet("matr", flag.ExitOnError)
+	fs.StringVar(&matrFilePath, "matrfile", "./Matrfile.go", "path to Matrfile")
+	fs.BoolVar(&cleanFlag, "clean", false, "clean the matr cache")
+	fs.BoolVar(&helpFlag, "h", false, "Display usage info")
+	fs.BoolVar(&versionFlag, "v", false, "Display version")
+	if err := fs.Parse(os.Args[1:]); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
-	args := flag.Args()
+	if cleanFlag {
+		if err := clean(matrFilePath); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
 
 	if helpFlag {
-		args = append([]string{"-h"}, args...)
+		fs.Usage()
 	}
 
-	cmds, err := parseMatrfile(matrFilePath)
-	if err != nil {
-		flag.Usage()
-		if helpFlag && flag.Arg(0) == "" {
-			fmt.Print("\nTargets:\n  No Matrfile.go or Matrfile found\n")
-			return
-		}
-
-		fmt.Print("\n  " + err.Error() + "\n")
+	if versionFlag {
+		fmt.Printf("\nmatr version: %s\n\n", Version)
 		return
 	}
 
-	matrCachePath, err := build(matrFilePath, cmds)
+	matrCachePath, err := build(matrFilePath)
 	if err != nil {
+		fs.Usage()
 		os.Stderr.WriteString(err.Error() + "\n")
 		return
 	}
 
-	if err := run(matrCachePath, args...); err != nil {
+	if err := run(matrCachePath, fs.Args()...); err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
 		return
 	}
+}
+
+func clean(matrfilePath string) error {
+	matrfilePath, err := getMatrfilePath(matrfilePath)
+	if err != nil {
+		return err
+	}
+
+	cachePath := filepath.Join(filepath.Dir(matrfilePath), defaultCacheFolder)
+	return os.RemoveAll(cachePath)
 }
 
 func parseMatrfile(path string) ([]parser.Command, error) {
@@ -97,9 +110,14 @@ func run(matrCachePath string, args ...string) error {
 	return c.Run()
 }
 
-func build(matrFilePath string, cmds []parser.Command) (string, error) {
-	matrPath, matrFile := filepath.Split(matrFilePath)
-	matrCachePath := filepath.Join(matrPath, ".matr")
+func build(matrFilePath string) (string, error) {
+	// get absolute path to matrfile
+	matrFilePath, err := filepath.Abs(matrFilePath)
+	if err != nil {
+		return "", err
+	}
+
+	matrCachePath := filepath.Join(filepath.Dir(matrFilePath), ".matr")
 
 	// check if the matrfile has changed
 	newHash, err := getSha256(matrFilePath)
@@ -131,7 +149,7 @@ func build(matrFilePath string, cmds []parser.Command) (string, error) {
 
 	if !symlinkValid(matrCachePath) {
 		os.Remove(filepath.Join(matrCachePath, defaultMatrFile))
-		if err := os.Symlink(filepath.Join(matrPath, matrFile), filepath.Join(matrCachePath, defaultMatrFile)); err != nil {
+		if err := os.Symlink(matrFilePath, filepath.Join(matrCachePath, defaultMatrFile)); err != nil {
 			if os.IsExist(err) {
 				return "", err
 			}
@@ -145,6 +163,11 @@ func build(matrFilePath string, cmds []parser.Command) (string, error) {
 		return "", err
 	}
 	defer f.Close()
+
+	cmds, err := parseMatrfile(matrFilePath)
+	if err != nil {
+		return "", err
+	}
 
 	if err := generate(cmds, f); err != nil {
 		return "", err
