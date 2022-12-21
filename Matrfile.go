@@ -19,3 +19,9 @@ func Test(ctx context.Context, args []string) error {
 
 	return nil
 }
+
+// Run is the primary entrypoint to matrs cli tool.
+func Run(ctx context.Context, args []string) error {
+	fmt.Println("Running matr")
+	return nil
+}
