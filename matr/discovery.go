@@ -30,8 +30,6 @@ var (
 // Run is the primary entrypoint to matrs cli tool.
 // This is where the matrfile path is resolved, compiled and executed
 func Run() {
-	// TODO: clean up this shit show
-	// create a new flagset
 	fs := flag.NewFlagSet("matr", flag.ExitOnError)
 	fs.StringVar(&matrFilePath, "matrfile", "./Matrfile.go", "path to Matrfile")
 	fs.BoolVar(&cleanFlag, "clean", false, "clean the matr cache")
@@ -53,6 +51,7 @@ func Run() {
 
 	if helpFlag {
 		fs.Usage()
+		return
 	}
 
 	if versionFlag {
@@ -84,15 +83,14 @@ func clean(matrfilePath string) error {
 }
 
 func parseMatrfile(path string) ([]parser.Command, error) {
-	var err error
 	var cmds []parser.Command
 
-	matrFilePath, err = filepath.Abs(matrFilePath)
+	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return cmds, err
 	}
 
-	matrFilePath, err = getMatrfilePath(matrFilePath)
+	matrFilePath, err := getMatrfilePath(absPath)
 	if err != nil {
 		return cmds, err
 	}
@@ -106,6 +104,9 @@ func parseMatrfile(path string) ([]parser.Command, error) {
 }
 
 func run(matrCachePath string, args ...string) error {
+	if _, err := os.Stat(filepath.Join(matrCachePath, "matr")); err != nil {
+		return errors.New("matrfile has not been compiled")
+	}
 	c := exec.Command(filepath.Join(matrCachePath, "matr"), args...)
 	c.Stderr = os.Stderr
 	c.Stdout = os.Stdout
@@ -113,59 +114,51 @@ func run(matrCachePath string, args ...string) error {
 }
 
 func build(matrFilePath string, noCache bool) (string, error) {
-	// get absolute path to matrfile
-	matrFilePath, err := filepath.Abs(matrFilePath)
+	absPath, err := filepath.Abs(matrFilePath)
 	if err != nil {
 		return "", err
 	}
 
-	matrCachePath := filepath.Join(filepath.Dir(matrFilePath), ".matr")
-
-	// check if the matrfile has changed
-	newHash, err := getSha256(matrFilePath)
+	newHash, err := getSha256(absPath)
 	if err != nil {
 		return "", err
 	}
 
-	// read the hash from the matrfileSha256 file
+	matrCachePath := filepath.Join(filepath.Dir(absPath), defaultCacheFolder)
+
 	oldHash, err := os.ReadFile(filepath.Join(matrCachePath, "matrfile.sha256"))
 	if err == nil && !noCache {
-		// if the hash is the same, we can skip the build
 		if ok := bytes.Equal(oldHash, newHash); ok {
 			return matrCachePath, nil
 		}
 	}
 
-	// check if the cache folder exists
 	if dir, err := os.Stat(matrCachePath); err != nil || !dir.IsDir() {
 		if err := os.Mkdir(matrCachePath, 0777); err != nil {
 			return "", err
 		}
 	}
 
-	// if the file doesn't exist, create it
-	if err := os.WriteFile(filepath.Join(matrCachePath, "matrfile.sha256"), []byte(newHash), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(matrCachePath, "matrfile.sha256"), newHash, 0644); err != nil {
 		return "", err
 	}
 
 	if !symlinkValid(matrCachePath) {
 		os.Remove(filepath.Join(matrCachePath, defaultMatrFile))
-		if err := os.Symlink(matrFilePath, filepath.Join(matrCachePath, defaultMatrFile)); err != nil {
+		if err := os.Symlink(absPath, filepath.Join(matrCachePath, defaultMatrFile)); err != nil {
 			if os.IsExist(err) {
 				return "", err
 			}
 		}
 	}
 
-	// create the main.go file in the matr cache folder
-	// for the generated code to write to
 	f, err := os.OpenFile(filepath.Join(matrCachePath, "main.go"), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
 	if err != nil {
 		return "", err
 	}
 	defer f.Close()
 
-	cmds, err := parseMatrfile(matrFilePath)
+	cmds, err := parseMatrfile(absPath)
 	if err != nil {
 		return "", err
 	}
@@ -174,7 +167,6 @@ func build(matrFilePath string, noCache bool) (string, error) {
 		return "", err
 	}
 
-	// TODO: check if we need to rebuild
 	cmd := exec.Command("go", "build", "-tags", "matr", "-o", filepath.Join(matrCachePath, "matr"),
 		filepath.Join(matrCachePath, "Matrfile.go"),
 		filepath.Join(matrCachePath, "main.go"),
@@ -189,7 +181,7 @@ func getSha256(path string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	defer f.Close()
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {
 		return nil, err
@@ -198,22 +190,21 @@ func getSha256(path string) ([]byte, error) {
 	return h.Sum(nil), nil
 }
 
-func getMatrfilePath(matrFilePath string) (string, error) {
-	matrFilePath, err := filepath.Abs(matrFilePath)
+func getMatrfilePath(mfpath string) (string, error) {
+	absPath, err := filepath.Abs(mfpath)
 	if err != nil {
 		return "", err
 	}
-
-	fp, err := os.Stat(matrFilePath)
+	fp, err := os.Stat(absPath)
 	if err != nil {
-		return "", errors.New("unable to find Matrfile: " + matrFilePath)
+		return "", errors.New("unable to find Matrfile: " + absPath)
 	}
 
 	if !fp.IsDir() {
-		return matrFilePath, nil
+		return absPath, nil
 	}
 
-	matrFilePath = filepath.Join(matrFilePath, "Matrfile")
+	matrFilePath := filepath.Join(absPath, "Matrfile")
 
 	if _, err = os.Stat(matrFilePath + ".go"); err == nil {
 		return matrFilePath + ".go", nil
@@ -231,7 +222,6 @@ func symlinkValid(path string) bool {
 	if err != nil {
 		return false
 	}
-
 	if _, err := os.Stat(pth); err != nil {
 		return false
 	}
