@@ -2,7 +2,6 @@ package parser
 
 import (
 	"errors"
-	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -14,10 +13,7 @@ type Command struct {
 	Name       string
 	Summary    string
 	Doc        string
-	Params     []Param
-	Returns    []Param
 	IsExported bool
-	WrapFunc   bool
 }
 
 // Param defines a matr HandlerFunc parameter
@@ -26,7 +22,7 @@ type Param struct {
 	Type string
 }
 
-// Parse parses a matr file to identify the available handlers
+// Parse parses a matr file and returns a list of commands
 func Parse(file string) ([]Command, error) {
 	// Create the AST by parsing src.
 	fset := token.NewFileSet() // positions are relative to fset
@@ -36,10 +32,11 @@ func Parse(file string) ([]Command, error) {
 	}
 
 	funcs := []Command{}
-	if len(f.Comments) == 0 || f.Comments[0].Pos() != 1 ||
+	if len(f.Comments) == 0 ||
+		f.Comments[0].Pos() != 1 ||
 		len(f.Comments[0].List) == 0 ||
 		f.Comments[0].List[0].Text != "//go:build matr" {
-		return funcs, errors.New("invalid Matrfile: matr build tag missing or incorrect:" + f.Comments[0].List[0].Text)
+		return funcs, errors.New("invalid Matrfile: matr build tag missing or incorrect")
 	}
 
 	for _, d := range f.Decls {
@@ -56,54 +53,18 @@ func Parse(file string) ([]Command, error) {
 func parseCmd(t *ast.FuncDecl) Command {
 	cmd := Command{
 		Name:       t.Name.String(),
-		Params:     []Param{},
 		IsExported: ast.IsExported(t.Name.String()),
 	}
 
-	if t.Doc != nil {
+	if t.Doc != nil && len(t.Doc.List) > 0 {
 		d := []string{}
 		for _, ds := range t.Doc.List {
-
 			d = append(d, strings.Replace(ds.Text, "//", "", 1))
 		}
-		cmd.Summary = d[0]
-		cmd.Doc = strings.Join(d, "\n")
-	}
 
-	if t.Type == nil || t.Type.Params == nil || len(t.Type.Params.List) == 0 {
-		return cmd
-	}
-
-	for _, fld := range t.Type.Params.List {
-		for _, name := range fld.Names {
-			cmd.Params = append(cmd.Params, Param{Name: name.String(), Type: formatType(fld.Type)})
-		}
-	}
-
-	if t.Type.Results == nil || len(t.Type.Results.List) == 0 {
-		return cmd
-	}
-
-	for _, fld := range t.Type.Results.List {
-		for _, name := range fld.Names {
-			cmd.Returns = append(cmd.Returns, Param{Name: name.String(), Type: formatType(fld.Type)})
-		}
+		cmd.Summary = strings.TrimLeft(d[0], " ")
+		cmd.Doc = strings.TrimLeft(strings.Join(d, "\n"), " ")
 	}
 
 	return cmd
-}
-
-func formatType(t ast.Expr) string {
-	switch tt := t.(type) {
-	case *ast.StarExpr:
-		return "*" + formatType(tt.X)
-	case *ast.SelectorExpr:
-		return fmt.Sprintf("%s.%s", tt.X, tt.Sel)
-	case *ast.Ident:
-		return tt.String()
-	case *ast.Ellipsis:
-		return "[]" + formatType(tt.Elt)
-	default:
-		return ""
-	}
 }
