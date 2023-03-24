@@ -146,7 +146,7 @@ func build(matrFilePath string, noCache bool) (string, error) {
 	if !symlinkValid(matrCachePath) {
 		os.Remove(filepath.Join(matrCachePath, defaultMatrFile))
 		if err := os.Symlink(absPath, filepath.Join(matrCachePath, defaultMatrFile)); err != nil {
-			if os.IsExist(err) {
+			if !os.IsExist(err) {
 				return "", err
 			}
 		}

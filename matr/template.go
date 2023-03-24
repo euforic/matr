@@ -1,9 +1,9 @@
 package matr
 
 import (
-	"html/template"
 	"io"
 	"strings"
+	"text/template"
 
 	"github.com/euforic/matr/parser"
 	"golang.org/x/text/cases"
@@ -16,6 +16,9 @@ package main
 import (
 	"context"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/euforic/matr/matr"
 )
@@ -36,12 +39,33 @@ func main() {
 	{{- end -}}
 	{{- end}}
 
-	// Run Matr
-	if err := m.Run(context.Background(), os.Args[1:]...); err != nil {
-		os.Stderr.WriteString("ERROR: "+err.Error()+"\n")
+	// Setup context with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	// Setup signal handling for SIGINT and SIGTERM
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+
+	// Run Matr in a separate goroutine
+	errChan := make(chan error)
+	go func() {
+		errChan <- m.Run(ctx, os.Args[1:]...)
+	}()
+
+	// Wait for Matr to finish, a timeout, or a signal
+	select {
+	case err := <-errChan:
+		if err != nil {
+			os.Stderr.WriteString("ERROR: " + err.Error() + "\n")
+		}
+	case <-ctx.Done():
+		os.Stderr.WriteString("ERROR: Context timed out\n")
+	case <-sig:
+		cancel()
+		os.Stderr.WriteString("INFO: Received signal, shutting down\n")
 	}
-}
-`
+}`
 
 // generate ...
 func generate(cmds []parser.Command, w io.Writer) error {

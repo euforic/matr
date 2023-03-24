@@ -9,6 +9,7 @@ import (
 	"github.com/euforic/matr/matr"
 )
 
+// Test runs the go test command on the current project
 func Test(ctx context.Context, args []string) error {
 	out, err := matr.Sh("go test -v ./...").Output()
 	if err != nil {
