@@ -104,10 +104,12 @@ func parseMatrfile(path string) ([]parser.Command, error) {
 }
 
 func run(matrCachePath string, args ...string) error {
-	if _, err := os.Stat(filepath.Join(matrCachePath, "matr")); err != nil {
+	matrPath := filepath.Join(matrCachePath, "matr")
+	if _, err := os.Stat(matrPath); err != nil {
 		return errors.New("matrfile has not been compiled")
 	}
-	c := exec.Command(filepath.Join(matrCachePath, "matr"), args...)
+
+	c := exec.Command(matrPath, args...)
 	c.Stderr = os.Stderr
 	c.Stdout = os.Stdout
 	return c.Run()
@@ -125,48 +127,72 @@ func build(matrFilePath string, noCache bool) (string, error) {
 	}
 
 	matrCachePath := filepath.Join(filepath.Dir(absPath), defaultCacheFolder)
-
 	oldHash, err := os.ReadFile(filepath.Join(matrCachePath, "matrfile.sha256"))
-	if err == nil && !noCache {
-		if ok := bytes.Equal(oldHash, newHash); ok {
-			return matrCachePath, nil
-		}
+
+	if err == nil && !noCache && bytes.Equal(oldHash, newHash) {
+		return matrCachePath, nil
 	}
 
-	if dir, err := os.Stat(matrCachePath); err != nil || !dir.IsDir() {
-		if err := os.Mkdir(matrCachePath, 0777); err != nil {
-			return "", err
-		}
-	}
-
-	if err := os.WriteFile(filepath.Join(matrCachePath, "matrfile.sha256"), newHash, 0644); err != nil {
+	if err := createOrUpdateCache(matrCachePath, absPath, newHash); err != nil {
 		return "", err
 	}
-
-	if !symlinkValid(matrCachePath) {
-		os.Remove(filepath.Join(matrCachePath, defaultMatrFile))
-		if err := os.Symlink(absPath, filepath.Join(matrCachePath, defaultMatrFile)); err != nil {
-			if !os.IsExist(err) {
-				return "", err
-			}
-		}
-	}
-
-	f, err := os.OpenFile(filepath.Join(matrCachePath, "main.go"), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
 
 	cmds, err := parseMatrfile(absPath)
 	if err != nil {
 		return "", err
 	}
 
-	if err := generate(cmds, f); err != nil {
+	if err := generateMainFile(matrCachePath, cmds); err != nil {
 		return "", err
 	}
 
+	return buildMatr(matrCachePath)
+}
+
+func createOrUpdateCache(matrCachePath, absPath string, newHash []byte) error {
+	if err := createCacheDir(matrCachePath); err != nil {
+		return err
+	}
+
+	if err := os.WriteFile(filepath.Join(matrCachePath, "matrfile.sha256"), newHash, 0644); err != nil {
+		return err
+	}
+
+	if !symlinkValid(matrCachePath) {
+		return createOrUpdateSymlink(matrCachePath, absPath)
+	}
+
+	return nil
+}
+
+func createCacheDir(matrCachePath string) error {
+	if dir, err := os.Stat(matrCachePath); err != nil || !dir.IsDir() {
+		return os.Mkdir(matrCachePath, 0777)
+	}
+	return nil
+}
+
+func createOrUpdateSymlink(matrCachePath, absPath string) error {
+	os.Remove(filepath.Join(matrCachePath, defaultMatrFile))
+	err := os.Symlink(absPath, filepath.Join(matrCachePath, defaultMatrFile))
+	if !os.IsExist(err) {
+		return err
+	}
+	return nil
+}
+
+func generateMainFile(matrCachePath string, cmds []parser.Command) error {
+	mainFilePath := filepath.Join(matrCachePath, "main.go")
+	f, err := os.OpenFile(mainFilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	return generate(cmds, f)
+}
+
+func buildMatr(matrCachePath string) (string, error) {
 	cmd := exec.Command("go", "build", "-tags", "matr", "-o", filepath.Join(matrCachePath, "matr"),
 		filepath.Join(matrCachePath, "Matrfile.go"),
 		filepath.Join(matrCachePath, "main.go"),
