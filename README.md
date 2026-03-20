@@ -58,6 +58,8 @@ go run . review
 go run . review "docs: add harness foundations"
 ```
 
+For changes that affect behavior, boundaries, or repo workflow expectations, follow the checklist in [`docs/REVIEW_LOOP.md`](docs/REVIEW_LOOP.md) after the command succeeds.
+
 ## Matrfile
 
 A matr file is any regular go file. Matrfiles must be marked with a build target of "matr"

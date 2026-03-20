@@ -9,6 +9,7 @@
 - Product context: [`docs/PRODUCT_SENSE.md`](docs/PRODUCT_SENSE.md)
 - Architecture and boundaries: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 - Reliability expectations: [`docs/RELIABILITY.md`](docs/RELIABILITY.md)
+- Review checklist and PR path: [`docs/REVIEW_LOOP.md`](docs/REVIEW_LOOP.md)
 - Security posture: [`docs/SECURITY.md`](docs/SECURITY.md)
 - Active execution plans: [`docs/exec-plans/active/README.md`](docs/exec-plans/active/README.md)
 - Completed execution plans: [`docs/exec-plans/completed/README.md`](docs/exec-plans/completed/README.md)
@@ -32,6 +33,8 @@
 `review` requires a conventional commit subject. It checks `HEAD` by default, or a subject passed as arguments, for example:
 
 `go run . review "docs: add harness foundations"`
+
+After `review` passes, run the checklist in [`docs/REVIEW_LOOP.md`](docs/REVIEW_LOOP.md) before merge for changes that affect behavior, boundaries, or repo workflow expectations.
 
 ## Boundaries
 
