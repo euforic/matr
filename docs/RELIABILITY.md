@@ -9,6 +9,8 @@ The repository relies on a small, repeatable review path:
 
 Use `matr -timeout <duration> ...` when a task legitimately needs longer than the default 5-minute execution window.
 
+When changing timeout behavior, use the manual smoketest in [`examples/timeout-smoketest/Matrfile.go`](../examples/timeout-smoketest/Matrfile.go) to verify both the default timeout path and an explicit override.
+
 Reliability expectations:
 
 - keep CI aligned with local commands

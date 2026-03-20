@@ -33,6 +33,11 @@ Use a small eval prompt when tests alone do not prove the change is correct.
 - "Walk the happy path for the changed command and identify where validation happens."
 - "List the user-visible behavior change and the test or doc that covers it."
 
+For timeout-related changes, run the smoketest in [`examples/timeout-smoketest/Matrfile.go`](../examples/timeout-smoketest/Matrfile.go):
+
+- `matr -matrfile examples/timeout-smoketest/Matrfile.go sleepy` should time out at about 5 minutes.
+- `time matr -timeout 7m -matrfile examples/timeout-smoketest/Matrfile.go sleepy` should succeed after about 6 minutes.
+
 Keep evals concrete and tied to a specific risk.
 
 ## PR Path
