@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"time"
 
 	"github.com/euforic/matr/parser"
 )
@@ -27,6 +28,7 @@ var (
 	versionFlag  bool
 	cleanFlag    bool
 	noCacheFlag  bool
+	timeoutFlag  time.Duration
 )
 
 // Run is the primary entrypoint to matrs cli tool.
@@ -38,6 +40,7 @@ func Run() {
 	fs.BoolVar(&helpFlag, "h", false, "Display usage info")
 	fs.BoolVar(&versionFlag, "v", false, "Display version")
 	fs.BoolVar(&noCacheFlag, "no-cache", false, "Don't use the matr cache")
+	fs.DurationVar(&timeoutFlag, "timeout", defaultExecutionTimeout, "timeout for target execution")
 	if err := fs.Parse(os.Args[1:]); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -68,7 +71,7 @@ func Run() {
 		return
 	}
 
-	if err := run(matrCachePath, fs.Args()...); err != nil {
+	if err := run(matrCachePath, timeoutFlag, fs.Args()...); err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
 		return
 	}
@@ -105,11 +108,12 @@ func parseMatrfile(path string) ([]parser.Command, error) {
 	return cmds, nil
 }
 
-func run(matrCachePath string, args ...string) error {
+func run(matrCachePath string, timeout time.Duration, args ...string) error {
 	if _, err := os.Stat(filepath.Join(matrCachePath, "matr")); err != nil {
 		return errors.New("matrfile has not been compiled")
 	}
 	c := exec.Command(filepath.Join(matrCachePath, "matr"), args...)
+	c.Env = append(os.Environ(), fmt.Sprintf("%s=%s", timeoutEnvVar, timeout))
 	c.Stderr = os.Stderr
 	c.Stdout = os.Stdout
 	return c.Run()

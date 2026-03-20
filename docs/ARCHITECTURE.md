@@ -33,4 +33,6 @@ The repository standardizes on these commands:
 - `matr test`
 - `matr review`
 
+The CLI also accepts `-timeout` to override the default 5-minute execution limit for a target run.
+
 CI should call the same validation and test paths instead of re-defining separate logic.

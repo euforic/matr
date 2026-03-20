@@ -41,6 +41,12 @@ Get expanded help for a target
 $ matr -h [target]
 ```
 
+Override the default 5-minute target timeout with `-timeout`:
+
+```bash
+$ matr -timeout 30m test
+```
+
 ## Repository Commands
 
 This repository dogfoods `matr` for its own local workflow:

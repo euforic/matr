@@ -7,6 +7,8 @@ The repository relies on a small, repeatable review path:
 - `matr review` for the full local review path, including conventional-commit validation
 - [`docs/REVIEW_LOOP.md`](REVIEW_LOOP.md) for manual review questions that tests and CI do not answer by themselves
 
+Use `matr -timeout <duration> ...` when a task legitimately needs longer than the default 5-minute execution window.
+
 Reliability expectations:
 
 - keep CI aligned with local commands

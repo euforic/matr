@@ -18,7 +18,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/euforic/matr/matr"
 )
@@ -39,8 +38,14 @@ func main() {
 	{{- end -}}
 	{{- end}}
 
+	timeout, err := matr.ExecutionTimeout()
+	if err != nil {
+		os.Stderr.WriteString("ERROR: " + err.Error() + "\n")
+		os.Exit(1)
+	}
+
 	// Setup context with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	// Setup signal handling for SIGINT and SIGTERM

@@ -30,6 +30,8 @@
 - `matr test`
 - `matr review`
 
+These commands accept the CLI `-timeout` flag when a task needs more or less than the default 5-minute limit, for example `matr -timeout 30m test`.
+
 `review` requires a conventional commit subject. It checks `HEAD` by default, or a subject passed as arguments, for example:
 
 `matr review "docs: add harness foundations"`

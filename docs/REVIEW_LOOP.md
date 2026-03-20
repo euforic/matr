@@ -22,6 +22,8 @@ Use this loop for any meaningful change, especially changes that touch CLI behav
 
 If any answer is no, fix the source of the mismatch instead of adding a one-off exception.
 
+If a review command required `-timeout`, note that explicitly in the task, plan, or review notes so the longer runtime is intentional rather than accidental.
+
 ## Lightweight Evals
 
 Use a small eval prompt when tests alone do not prove the change is correct.
