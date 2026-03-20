@@ -41,6 +41,23 @@ Get expanded help for a target
 $ matr -h [target]
 ```
 
+## Repository Commands
+
+This repository dogfoods `matr` for its own local workflow:
+
+```bash
+go run . setup
+go run . validate
+go run . test
+go run . review
+```
+
+`review` validates the latest commit subject against the conventional-commits format. You can also pass a subject explicitly:
+
+```bash
+go run . review "docs: add harness foundations"
+```
+
 ## Matrfile
 
 A matr file is any regular go file. Matrfiles must be marked with a build target of "matr"
@@ -69,6 +86,8 @@ A target may be designated the default target, which is run when the user runs
 matr with no target specified. To denote the default, create a function named `Default`.
 If no default target is specified, running `matr` with no target will print the list of targets
 and docs.
+
+See [`AGENTS.md`](AGENTS.md) and the files under [`docs/`](docs/) for the repository map, architecture notes, and review expectations.
 
 ## Dependencies
 

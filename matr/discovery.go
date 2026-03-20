@@ -7,9 +7,11 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 
 	"github.com/euforic/matr/parser"
 )
@@ -119,7 +121,7 @@ func build(matrFilePath string, noCache bool) (string, error) {
 		return "", err
 	}
 
-	newHash, err := getSha256(absPath)
+	newHash, err := getProjectHash(absPath)
 	if err != nil {
 		return "", err
 	}
@@ -168,9 +170,10 @@ func build(matrFilePath string, noCache bool) (string, error) {
 	}
 
 	cmd := exec.Command("go", "build", "-tags", "matr", "-o", filepath.Join(matrCachePath, "matr"),
-		filepath.Join(matrCachePath, "Matrfile.go"),
-		filepath.Join(matrCachePath, "main.go"),
+		"Matrfile.go",
+		"main.go",
 	)
+	cmd.Dir = matrCachePath
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 	return matrCachePath, cmd.Run()
@@ -185,6 +188,59 @@ func getSha256(path string) ([]byte, error) {
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {
 		return nil, err
+	}
+
+	return h.Sum(nil), nil
+}
+
+func getProjectHash(matrfilePath string) ([]byte, error) {
+	root := filepath.Dir(matrfilePath)
+
+	var files []string
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if d.IsDir() {
+			if filepath.Base(path) == defaultCacheFolder {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
+		if filepath.Ext(path) != ".go" {
+			return nil
+		}
+
+		files = append(files, path)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	sort.Strings(files)
+
+	h := sha256.New()
+	for _, file := range files {
+		relPath, err := filepath.Rel(root, file)
+		if err != nil {
+			return nil, err
+		}
+
+		if _, err := io.WriteString(h, relPath+"\n"); err != nil {
+			return nil, err
+		}
+
+		contentHash, err := getSha256(file)
+		if err != nil {
+			return nil, err
+		}
+
+		if _, err := h.Write(contentHash); err != nil {
+			return nil, err
+		}
 	}
 
 	return h.Sum(nil), nil
