@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"time"
 
 	"github.com/euforic/matr/parser"
@@ -66,11 +65,12 @@ func Run() {
 	if err != nil {
 		fs.Usage()
 		_, _ = fmt.Fprintln(os.Stderr, err)
-		return
+		os.Exit(1)
 	}
 
 	if err := run(matrCachePath, timeoutFlag, fs.Args()...); err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 }
 
@@ -200,22 +200,14 @@ func hashFiles(paths ...string) ([]byte, error) {
 }
 
 func buildHashInputs(matrfilePath string) ([]string, error) {
-	_, currentFile, _, ok := runtime.Caller(0)
-	if !ok {
+	execPath, err := os.Executable()
+	if err != nil {
 		return nil, errors.New("unable to resolve build inputs")
 	}
 
-	root := filepath.Dir(currentFile)
 	return []string{
 		matrfilePath,
-		filepath.Join(root, "discovery.go"),
-		filepath.Join(root, "matr.go"),
-		filepath.Join(root, "task.go"),
-		filepath.Join(root, "template.go"),
-		filepath.Join(root, "timeout.go"),
-		filepath.Join(root, "utils.go"),
-		filepath.Join(root, "parser", "parser.go"),
-		filepath.Join(root, "parser", "strutil.go"),
+		execPath,
 	}, nil
 }
 

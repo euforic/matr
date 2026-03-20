@@ -133,6 +133,49 @@ func Build(ctx context.Context, cmd any, args []string) error {
 	}
 }
 
+func TestParseRejectsInvalidShortFlagMetadata(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name    string
+		meta    string
+		wantErr string
+	}{
+		{
+			name:    "multiple chars",
+			meta:    "@timeout:duration,short=ab;invalid short",
+			wantErr: "single character",
+		},
+		{
+			name:    "hyphen",
+			meta:    "@timeout:duration,short=-;invalid short",
+			wantErr: "cannot start with '-'",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			path := writeTempGoFile(t, `//go:build matr
+
+package main
+
+import "context"
+
+// Build compiles the project.
+// `+tc.meta+`
+func Build(ctx context.Context, cmd any, args []string) error {
+	return nil
+}
+`)
+
+			_, err := Parse(path)
+			if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
+				t.Fatalf("expected %q error, got %v", tc.wantErr, err)
+			}
+		})
+	}
+}
+
 func TestParseReturnsErrorForInvalidGo(t *testing.T) {
 	t.Parallel()
 

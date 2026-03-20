@@ -97,3 +97,24 @@ func TestRunFailsOnDependencyCycle(t *testing.T) {
 		t.Fatalf("expected dependency cycle error, got %v", err)
 	}
 }
+
+func TestRunReturnsErrorForUnknownTask(t *testing.T) {
+	t.Parallel()
+
+	m := New()
+	var help bytes.Buffer
+	var errs bytes.Buffer
+	m.helpOut = &help
+	m.errorOut = &errs
+
+	err := m.Run(context.Background(), "missing")
+	if err == nil || !strings.Contains(err.Error(), `no handler found for target "missing"`) {
+		t.Fatalf("expected unknown task error, got %v", err)
+	}
+	if !strings.Contains(errs.String(), `ERROR: no handler found for target "missing"`) {
+		t.Fatalf("stderr missing unknown task message:\n%s", errs.String())
+	}
+	if !strings.Contains(help.String(), "Targets:") {
+		t.Fatalf("usage output missing command list:\n%s", help.String())
+	}
+}

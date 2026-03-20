@@ -2,6 +2,7 @@ package matr
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -135,9 +136,10 @@ func (m *Matr) Run(ctx context.Context, args ...string) error {
 
 	task, ok := m.lookupTask(args[0])
 	if !ok {
-		_, _ = fmt.Fprintf(m.errorOut, "ERROR: no handler found for target %q\n", args[0])
+		msg := fmt.Sprintf("no handler found for target %q", args[0])
+		_, _ = fmt.Fprintf(m.errorOut, "ERROR: %s\n", msg)
 		m.PrintUsage("")
-		return nil
+		return errors.New(msg)
 	}
 
 	if len(args) > 1 && isHelpArg(args[1]) {

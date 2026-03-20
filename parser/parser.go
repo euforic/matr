@@ -161,6 +161,12 @@ func parseFlag(line string) (Flag, error) {
 			if flag.Short == "" {
 				return Flag{}, errors.New("invalid short flag metadata")
 			}
+			if len(flag.Short) != 1 {
+				return Flag{}, errors.New("short flag must be a single character")
+			}
+			if flag.Short[0] == '-' {
+				return Flag{}, errors.New("short flag cannot start with '-'")
+			}
 		case strings.HasPrefix(raw, "default="):
 			flag.Default = strings.TrimSpace(strings.TrimPrefix(raw, "default="))
 		default:

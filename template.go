@@ -67,12 +67,15 @@ func main() {
 	case err := <-errChan:
 		if err != nil {
 			_, _ = os.Stderr.WriteString("ERROR: " + err.Error() + "\n")
+			os.Exit(1)
 		}
 	case <-ctx.Done():
 		_, _ = os.Stderr.WriteString("ERROR: Context timed out\n")
+		os.Exit(1)
 	case <-sig:
 		cancel()
 		_, _ = os.Stderr.WriteString("INFO: Received signal, shutting down\n")
+		os.Exit(130)
 	}
 }`
 

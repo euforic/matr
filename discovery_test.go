@@ -3,6 +3,7 @@ package matr
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -139,5 +140,44 @@ func TestGetMatrfilePathMissingReturnsError(t *testing.T) {
 	_, err := getMatrfilePath(filepath.Join(t.TempDir(), "missing"))
 	if err == nil {
 		t.Fatal("expected error")
+	}
+}
+
+func TestRunReturnsErrorWhenGeneratedTaskFails(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	matrfilePath := filepath.Join(dir, "Matrfile.go")
+	content := `//go:build matr
+
+package main
+
+import (
+	"context"
+	"errors"
+
+	"github.com/euforic/matr"
+)
+
+// Fail always returns an error.
+func Fail(ctx context.Context, _ *matr.Invocation, args []string) error {
+	return errors.New("boom")
+}
+`
+	if err := os.WriteFile(matrfilePath, []byte(content), 0o644); err != nil {
+		t.Fatalf("write matrfile: %v", err)
+	}
+
+	cacheDir, err := build(matrfilePath, true)
+	if err != nil {
+		t.Fatalf("build returned error: %v", err)
+	}
+
+	err = run(cacheDir, time.Second, "fail")
+	if err == nil {
+		t.Fatal("expected generated runner error")
+	}
+	if !strings.Contains(err.Error(), "exit status") {
+		t.Fatalf("expected exit status error, got %v", err)
 	}
 }
