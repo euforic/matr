@@ -15,9 +15,11 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/euforic/matr/matr"
 )
@@ -38,10 +40,14 @@ func main() {
 	{{- end -}}
 	{{- end}}
 
-	timeout, err := matr.ExecutionTimeout()
-	if err != nil {
-		os.Stderr.WriteString("ERROR: " + err.Error() + "\n")
-		os.Exit(1)
+	timeout := 5 * time.Minute
+	if value := os.Getenv("MATR_TIMEOUT"); value != "" {
+		parsedTimeout, err := time.ParseDuration(value)
+		if err != nil {
+			os.Stderr.WriteString("ERROR: " + fmt.Sprintf("invalid MATR_TIMEOUT value %q: %v", value, err) + "\n")
+			os.Exit(1)
+		}
+		timeout = parsedTimeout
 	}
 
 	// Setup context with timeout
