@@ -61,14 +61,18 @@ func TestFunc2(ctx context.Context, args []string) {
 			if err != nil {
 				t.Fatalf("Failed to create temporary file: %v", err)
 			}
-			defer os.Remove(tmpFile.Name())
+			t.Cleanup(func() {
+				_ = os.Remove(tmpFile.Name())
+			})
 
 			// Write the input content to the temporary file
 			_, err = tmpFile.WriteString(tc.input)
 			if err != nil {
 				t.Fatalf("Failed to write to temporary file: %v", err)
 			}
-			tmpFile.Close()
+			if err := tmpFile.Close(); err != nil {
+				t.Fatalf("Failed to close temporary file: %v", err)
+			}
 
 			cmds, err := Parse(tmpFile.Name())
 
