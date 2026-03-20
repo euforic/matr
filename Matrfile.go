@@ -51,7 +51,7 @@ func Run(ctx context.Context, args []string) error {
 func checkCommitSubject(args []string) error {
 	subject := strings.TrimSpace(strings.Join(args, " "))
 	if subject == "" {
-		out, err := matr.Sh("git log -1 --pretty=%s HEAD").Output()
+		out, err := matr.Sh("git log -1 --pretty=%%s HEAD").Output()
 		if err != nil {
 			return err
 		}

@@ -46,16 +46,16 @@ $ matr -h [target]
 This repository dogfoods `matr` for its own local workflow:
 
 ```bash
-go run . setup
-go run . validate
-go run . test
-go run . review
+matr setup
+matr validate
+matr test
+matr review
 ```
 
 `review` validates the latest commit subject against the conventional-commits format. You can also pass a subject explicitly:
 
 ```bash
-go run . review "docs: add harness foundations"
+matr review "docs: add harness foundations"
 ```
 
 For changes that affect behavior, boundaries, or repo workflow expectations, follow the checklist in [`docs/REVIEW_LOOP.md`](docs/REVIEW_LOOP.md) after the command succeeds.

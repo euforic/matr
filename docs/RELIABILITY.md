@@ -2,9 +2,9 @@
 
 The repository relies on a small, repeatable review path:
 
-- `go run . validate` for fast structural checks
-- `go run . test` for package tests
-- `go run . review` for the full local review path, including conventional-commit validation
+- `matr validate` for fast structural checks
+- `matr test` for package tests
+- `matr review` for the full local review path, including conventional-commit validation
 - [`docs/REVIEW_LOOP.md`](REVIEW_LOOP.md) for manual review questions that tests and CI do not answer by themselves
 
 Reliability expectations:

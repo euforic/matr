@@ -28,9 +28,9 @@
 
 The repository standardizes on these commands:
 
-- `go run . setup`
-- `go run . validate`
-- `go run . test`
-- `go run . review`
+- `matr setup`
+- `matr validate`
+- `matr test`
+- `matr review`
 
 CI should call the same validation and test paths instead of re-defining separate logic.

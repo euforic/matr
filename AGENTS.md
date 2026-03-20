@@ -25,14 +25,14 @@
 
 ## Standard Commands
 
-- `go run . setup`
-- `go run . validate`
-- `go run . test`
-- `go run . review`
+- `matr setup`
+- `matr validate`
+- `matr test`
+- `matr review`
 
 `review` requires a conventional commit subject. It checks `HEAD` by default, or a subject passed as arguments, for example:
 
-`go run . review "docs: add harness foundations"`
+`matr review "docs: add harness foundations"`
 
 After `review` passes, run the checklist in [`docs/REVIEW_LOOP.md`](docs/REVIEW_LOOP.md) before merge for changes that affect behavior, boundaries, or repo workflow expectations.
 
