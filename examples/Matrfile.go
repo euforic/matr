@@ -9,20 +9,25 @@ import (
 	"strings"
 	"time"
 
-	"github.com/euforic/matr/matr"
+	"github.com/euforic/matr"
 )
 
 // Default is an example of overriding the default handler
-func Default(ctx context.Context, args []string) error {
+func Default(ctx context.Context, _ *matr.Invocation, args []string) error {
 	fmt.Println("Running Custom Default HandlerFunc...")
-	Build(ctx, args)
-	return nil
+	return Build(ctx, &matr.Invocation{}, args)
 }
 
-// Build is used as and example handler
-func Build(ctx context.Context, args []string) error {
-	matr.Deps(ctx, Proto, Test)
+// Build is used as an example handler.
+// @alias:b
+// @depends:proto,test
+// @release:bool,short=r;build with release settings
+// @timeout:duration,short=t,default=30s;override build timeout
+func Build(ctx context.Context, cmd *matr.Invocation, args []string) error {
 	fmt.Println("Building...")
+	fmt.Println("release:", cmd.Bool("release"))
+	fmt.Println("timeout:", cmd.Duration("timeout"))
+	fmt.Println("args:", strings.Join(args, ","))
 
 	out, err := matr.Sh(`
 		ls -la
@@ -34,47 +39,60 @@ func Build(ctx context.Context, args []string) error {
 }
 
 // PrintArgs prints the provided args
-func PrintArgs(ctx context.Context, args []string) error {
+func PrintArgs(ctx context.Context, _ *matr.Invocation, args []string) error {
+	_ = ctx
 	fmt.Println("args:", "["+strings.Join(args, ",")+"]")
 	return nil
 }
 
-// Run is used as and example handler
-func Run(ctx context.Context, args []string) error {
-	matr.Deps(ctx, Build)
+// Run is used as an example handler.
+// @depends:build
+func Run(ctx context.Context, _ *matr.Invocation, args []string) error {
+	_ = ctx
+	_ = args
 	fmt.Println("Running...")
 	for {
 	}
 }
 
 // notExported will run the project
-func notExported(ctx context.Context, args []string) error {
+func notExported(ctx context.Context, _ *matr.Invocation, args []string) error {
+	_ = ctx
+	_ = args
 	fmt.Println("NotExported...")
 	time.Sleep(1 * time.Second)
 	return nil
 }
 
 // Proto will build the protobuf files into golang files
-func Proto(ctx context.Context, args []string) error {
+func Proto(ctx context.Context, _ *matr.Invocation, args []string) error {
+	_ = ctx
+	_ = args
 	err := matr.Sh("echo \"build some proto file\"").Run()
 	return err
 }
 
 // Test is used as and example handler
-func Test(ctx context.Context, args []string) error {
+func Test(ctx context.Context, _ *matr.Invocation, args []string) error {
+	_ = ctx
+	_ = args
 	err := matr.Sh(`echo "Run unit tests..."`).Run()
 	time.Sleep(1 * time.Second)
 	return err
 }
 
 // Bench is used as and example handler
-func Bench(ctx context.Context, args []string) error {
+func Bench(ctx context.Context, _ *matr.Invocation, args []string) error {
+	_ = ctx
+	_ = args
 	err := matr.Sh(`echo "Run benchmark......"`).Run()
 	return err
 }
 
 // Docker is used as and example handler
-func Docker(ctx context.Context, args []string) error {
+func Docker(ctx context.Context, _ *matr.Invocation, args []string) error {
+	_ = ctx
+	_ = args
 	err := matr.Sh(`echo "Build some docker file...."`).Run()
 	return err
 }
@@ -82,7 +100,9 @@ func Docker(ctx context.Context, args []string) error {
 // DockerCompose is used as and example handler
 // This is a multi line comment that should
 // show up in the full docs
-func DockerCompose(ctx context.Context, args []string) error {
+func DockerCompose(ctx context.Context, _ *matr.Invocation, args []string) error {
+	_ = ctx
+	_ = args
 	err := matr.Sh(`echo "Build some docker-compose file...."`).Run()
 	return err
 }
