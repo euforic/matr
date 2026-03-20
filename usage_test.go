@@ -13,8 +13,7 @@ func TestPrintUsageIncludesAliasesDependenciesAndFlagMetadata(t *testing.T) {
 	m := New()
 	var help bytes.Buffer
 	var errs bytes.Buffer
-	m.helpOut = &help
-	m.errorOut = &errs
+	m.SetOutputs(&help, &errs)
 
 	m.Handle(&Task{
 		Name:      "build",
@@ -104,8 +103,7 @@ func TestRunReturnsErrorForUnknownTask(t *testing.T) {
 	m := New()
 	var help bytes.Buffer
 	var errs bytes.Buffer
-	m.helpOut = &help
-	m.errorOut = &errs
+	m.SetOutputs(&help, &errs)
 
 	err := m.Run(context.Background(), "missing")
 	if err == nil || !strings.Contains(err.Error(), `no handler found for target "missing"`) {

@@ -18,20 +18,21 @@ import (
 	"syscall"
 
 	"github.com/euforic/matr"
+	"github.com/euforic/matr/cli"
 )
 
 func main() {
-	m := matr.New()
+	m := cli.New()
 
 	{{- range .}}
 	{{if .IsExported }}
-	m.Handle(&matr.Task{
+	m.Handle(&cli.Task{
 		Name: "{{cmdname .Name}}",
 		Summary: "{{trim .Summary}}",
 		Doc: ` + "`{{trim .Doc}}`," + `
 		Aliases: []string{ {{- range $i, $a := .Aliases}}{{if $i}}, {{end}}"{{$a}}"{{end}} },
 		DependsOn: []string{ {{- range $i, $d := .DependsOn}}{{if $i}}, {{end}}"{{$d}}"{{end}} },
-		Flags: []matr.Flag{
+		Flags: []cli.Flag{
 			{{- range .Flags }}
 			{
 				Name: {{ printf "%q" .Name }},
@@ -88,15 +89,15 @@ func generate(cmds []parser.Command, w io.Writer) error {
 		"flagType": func(name string) string {
 			switch name {
 			case "bool":
-				return "matr.FlagBool"
+				return "cli.FlagBool"
 			case "string":
-				return "matr.FlagString"
+				return "cli.FlagString"
 			case "int":
-				return "matr.FlagInt"
+				return "cli.FlagInt"
 			case "duration":
-				return "matr.FlagDuration"
+				return "cli.FlagDuration"
 			default:
-				return `matr.FlagType("` + name + `")`
+				return `cli.FlagType("` + name + `")`
 			}
 		},
 	}).Parse(defaultTemplate))

@@ -73,6 +73,11 @@ Any exported function that is `func(ctx context.Context, cmd *matr.Invocation, a
 matr target. If the function returns an error it will print to stdout and cause the matrfile
 to exit with an exit with a non 0 exit code.
 
+The generated runner now executes through `github.com/euforic/matr/cli`. The root package
+continues to re-export the runtime types and constructor, so existing Matrfiles can keep using
+`github.com/euforic/matr` unchanged. If you want to embed the command runtime directly, use the
+`cli` package.
+
 Comments on the target function will become documentation accessible by running
 `matr <target> -h`. This will show the command docs, aliases, dependencies, and command-scoped
 flags for that target.
